@@ -12,6 +12,7 @@ type Station struct {
 	msg     []Msg
 	in      chan Msg
 	order   chan string
+	fetcher Fetcher
 }
 
 func (this *Station) ClientReg(c Client) error {
@@ -52,6 +53,6 @@ func (this *Station) Close() {
 	}
 	this.order<-"quit"
 }
-func (this *Station) Fetchloop(f Fetch){
-	
+func (this *Station) Fetchloop(f FetchMachine){
+	f.Start(&this.in)
 }

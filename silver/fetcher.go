@@ -13,10 +13,13 @@ import (
 type SilverFetcher struct {
 	sPrices []JJJCarrier.Msg
 	addr    url.URL
-	marshal JJJCarrier.Marshaler
 	intervalMS time.Duration
 }
-type silverMarshal struct {
+type SilverMarshal struct {
+}
+func (this *SilverFetcher) Init(a url.URL,t time.Duration) {
+	this.addr=a
+	this.intervalMS=t
 }
 func (this *SilverFetcher) GetIntMs() time.Duration {
 	return this.intervalMS
@@ -31,9 +34,9 @@ func (this *SilverFetcher) GetNew(marshal JJJCarrier.Marshaler) ([]JJJCarrier.Ms
 	if this.addr.Scheme != "http" {
 		return nil, errors.New("SliverFetcher: URL isn't http")
 	}
-	this.marshal = marshal
+	
 	for {
-		slice, err := this.fetchMsg(this.addr.String())
+		slice, err := this.fetchMsg(this.addr.String(),marshal)
 		if err != nil {
 			fmt.Printf("%s-continue", err.Error())
 			continue
@@ -48,19 +51,19 @@ func (this *SilverFetcher) GetNew(marshal JJJCarrier.Marshaler) ([]JJJCarrier.Ms
 
 	}
 }
-func (this *SilverFetcher) fetchMsg(url string) ([]JJJCarrier.Msg, error) {
+func (this *SilverFetcher) fetchMsg(url string,m JJJCarrier.Marshaler) ([]JJJCarrier.Msg, error) {
 	code, state := getHtml(url)
 	if state != 200 {
 		return nil, errors.New("HttpFetch: http state return " + strconv.Itoa(state))
 	}
-	slice, err := this.marshal.Marshal(code)
+	slice, err := m.Marshal(code)
 	if err != nil {
 		return nil, err
 	} else {
 		return slice, nil
 	}
 }
-func (this silverMarshal) Marshal(v interface{}) ([]JJJCarrier.Msg, error) {
+func (this SilverMarshal) Marshal(v interface{}) ([]JJJCarrier.Msg, error) {
 	rawRegxpString := `(dataCell.cell0.*)dataObjs\[`
 	rawdate := silverRaw2slice(rawRegxpString, v.(string))
 	if rawdate == nil {

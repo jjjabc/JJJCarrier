@@ -3,7 +3,8 @@ package JJJCarrier
 import (
 	"fmt"
 )
-type Marshaler interface{
+
+type Marshaler interface {
 	Marshal(interface{}) ([]Msg, error)
 }
 
@@ -11,17 +12,23 @@ type Marshaler interface{
 type Fetcher interface {
 	GetNew(Marshaler) ([]Msg, error)
 }
-type Fetch struct {
-	order   chan string
+type FetchMachine struct {
+	order chan string
+	fetcher Fetcher
+	marshal Marshaler
 }
-func (this *Fetch) FetchThread(f Fetcher,m *chan Msg,marshal Marshaler) {
+func (this *FetchMachine) Init(f Fetcher,m Marshaler){
+	this.fetcher=f
+	this.marshal=m
+}
+func (this *FetchMachine) Start(m *chan Msg) {
 	if m == nil {
 		panic("FetchThread: *chan Msg is nil pointer")
 	}
 	for {
 		tempChan := make(chan Msg)
 		go func() {
-			news, err := f.GetNew(marshal)
+			news, err := this.fetcher.GetNew(this.marshal)
 			if err != nil {
 				panic(err)
 			}
@@ -31,9 +38,9 @@ func (this *Fetch) FetchThread(f Fetcher,m *chan Msg,marshal Marshaler) {
 		}()
 		defer func() {
 			if err := recover(); err != nil {
-				fmt.Println("Panic:",err)
+				fmt.Println("Panic:", err)
 				fmt.Printf("Restart FetchThread")
-				this.FetchThread(f,m,marshal)
+				this.Start(m)
 			}
 		}()
 		select {
@@ -45,4 +52,7 @@ func (this *Fetch) FetchThread(f Fetcher,m *chan Msg,marshal Marshaler) {
 			}
 		}
 	}
+}
+func (this *FetchMachine)Stop(){
+	this.order<-"quit"
 }
